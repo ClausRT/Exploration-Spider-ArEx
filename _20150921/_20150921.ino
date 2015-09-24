@@ -5,7 +5,7 @@
 
 #include <Wire.h>
 #include <Adafruit_PWMServoDriver.h>
-#define setAngleDelay 5
+#define setAngleDelay 1
 
 Adafruit_PWMServoDriver RightPWM = Adafruit_PWMServoDriver(0x40);	
 Adafruit_PWMServoDriver LeftPWM = Adafruit_PWMServoDriver(0x41);
@@ -27,9 +27,9 @@ float OFF[] = {-3,  0, -55,   //Pata 0
 enum servoPos {Top = 0, Mid, Bot};
 enum Side {Left = -1, Right = 1};
 
-float Positions[3][3] = {{90, 50, 205},
+/*float Positions[3][3] = {{90, 50, 205},
 			 {110, 30, 190},
-			 {120, 70, 175}};
+			 {120, 70, 175}};*/
 
 /*
 	Classe que descreve as caracteristicas fisicas de um servo motor que opera
@@ -42,25 +42,27 @@ class servoMotor {
 	float Min;				
 	float Max;				 
 	servoPos Position;
-	Side side;
+	Side side;	
+	bool Front;
 	float limit;
 	bool limited;
 	float checkMinMax (float a);
 	float isLeft (float a);
 public:
-	servoMotor (int num, float off, servoPos p, Side s);
+	servoMotor (int num, float off, servoPos p, Side s, bool f);
 	void setAngle (float a);
 	void Step (float n = 1);
 	void setLimit (float a = 0);
-        bool limitReach(void);
+    bool limitReach(void);	
 };
 
-servoMotor::servoMotor (int num, float off, servoPos p, Side s){
+servoMotor::servoMotor (int num, float off, servoPos p, Side s, bool f){
 	id = num;
 	offset = off;
 	Position = p;
 	side = s;
 	limited = false;
+	Front = f;
        
     switch (p){
       case Top:
@@ -82,6 +84,18 @@ servoMotor::servoMotor (int num, float off, servoPos p, Side s){
         Max = 190;
         break;
     }
+	
+	Serial.print("Motor ");
+	Serial.print(num);
+	Serial.print(" offset: ");
+	Serial.print(off);
+	Serial.print(" Pos: ");
+	Serial.print(p);
+	Serial.print(" Side: ");
+	Serial.print(s);
+	Serial.print(" Front: ");
+	Serial.println(f);
+	Serial.println("");
 }
 
 /*
@@ -104,7 +118,10 @@ float servoMotor::checkMinMax (float a){
 	Internamente a classe armazena o valor teorico/visual dos motores — todos 100 graus — e não o seu valor real.
 */
 float servoMotor::isLeft (float a){
-	if (side == Left && Position == Top)
+	bool sLeft = side == Left;
+	bool result = sLeft == Front;
+	
+	if (result && Position == Top)
 		return (-1 * (a - 90)) + 90;
 	else
 		return a;
@@ -196,15 +213,18 @@ bool servoMotor::limitReach(void){
 
 class limb {
 	int id, positionIndex;
+	float angles[3];
 	Side side;
+	String positions;
 public:
 	servoMotor* motors[3];
-	limb (int num, Side s);
+	limb (int num, Side s, bool f);
 	void setAllAngles(float a[3]);
-	void setPosition(char p);
-        void setLimits(float a[3]);
-        void Step(float n = 1);
-        bool limitReach(void);
+	void setPositions(String angles);
+	void nextPosition(void);
+    void setLimits(float a[3]);
+    void Step(float n = 1);
+    bool limitReach(void);
 /*
 	void setPositionsList(int a = 0);
 	void setListPosition(char pList[10]);
@@ -214,7 +234,7 @@ public:
 };
 
 
-limb::limb (int num, Side s){
+limb::limb (int num, Side s, bool f){
 	id = num;
 	side = s;
 	
@@ -228,9 +248,10 @@ limb::limb (int num, Side s){
 			case 2:  p = Bot;   break;
 		}
 		
-		motors[i] = new servoMotor(j, OFF[j], p, s);
+		motors[i] = new servoMotor(j, OFF[j], p, s, f);
 	}
 }
+
 
 void limb::setAllAngles(float a[3]){
   for (int i = 0; i < 3; i++)
@@ -256,16 +277,43 @@ bool limb::limitReach(void){
   return B;
 }
 
-void limb::setPosition(char p){
-  int c;
-  
-	switch(p){
-		case 'a': c = 0; break;
-		case 'b': c = 1; break;
-		case 'c': c = 2; break;
-	}
+void limb::setPositions(String angles){
+	positionIndex = 0;
+	positions = angles;
+	nextPosition();
+}
 
-    setAllAngles(Positions[c]);
+void limb::nextPosition(void){
+  int tamanho, indice, i;	
+  String subString;
+  
+  indice = 0;
+  tamanho = positions.length();
+  
+  if (positionIndex >= tamanho)
+	  positionIndex = 0;
+	
+  for (i = positionIndex; i <= tamanho; i++){
+    if (positions[i] == ' ' || positions[i] == ';' || positions[i] == ',' || positions[i] == '\0'){
+      subString = positions.substring(positionIndex, i);
+     
+      if (subString.toFloat() >= 0) {
+        angles[indice] = subString.toFloat();
+	  }
+	  indice++;
+	  
+      while (positions[i+1] == ' '){
+        i++;
+      }      
+	  
+	  positionIndex = i + 1;
+	  
+	  if (indice >= 3) {
+		  break;
+	  }
+    }	
+  }  	
+	setLimits(angles);
 }
 
 /*
@@ -324,27 +372,47 @@ void setup() {
 }
 
 void loop() {
-  float A[] = {120, 120, 120};
-  float B[] = {90, 90, 90};
-  int n = 1;
-  
-  
-  for (int i = 0; i < 8; i ++){
-    if (i < 4)
-      Patas[i] = new limb(i, Right);
-    else
-      Patas[i] = new limb(i, Left);
-  }
-    
-  while(1){    
-	for (int oi = 0; oi < 3; oi++){
-		for (int i = 0; i < 8; i ++)
-			Patas[i]->setLimits(Positions[oi]);
-    
-		do{
-			for (int i = 0; i < 8; i ++)
-				Patas[i]->Step(n);         
-		}while(!Patas[0]->limitReach());
+	float B [3] = {90, 90, 90};
+	bool f;
+	Side s;
+	
+	//i == 2 || i == 3 || i == 6 || i == 7
+	for (int i = 0; i < 8; i ++){
+		if (i < 4) 
+			s = Right;
+		else
+			s = Left;
+		
+		if (i > 1 && i < 6)
+			f = true;
+		else
+			f = false;
+		
+		Patas[i] = new limb(i, s, f);
+		Patas[i]->setAllAngles(B);
 	}
+	
+	Patas[2]->setPositions("110, 30, 190, 120, 70, 175, 90, 50, 205");	
+	Patas[3]->setPositions("120, 70, 175, 90, 50, 205, 110, 30, 190");
+	Patas[4]->setPositions("120, 70, 175, 90, 50, 205, 110, 30, 190");
+	Patas[5]->setPositions("110, 30, 190, 120, 70, 175, 90, 50, 205");
+	
+	Patas[0]->setPositions("110, 30, 190, 90, 50, 205, 120, 70, 175");
+	Patas[1]->setPositions("120, 70, 175, 110, 30, 190, 90, 50, 205");
+	Patas[6]->setPositions("120, 70, 175, 110, 30, 190, 90, 50, 205");
+	Patas[7]->setPositions("110, 30, 190, 90, 50, 205, 120, 70, 175");
+	
+	delay(500);
+	
+  while(1){
+	  do{
+		  for (int i = 0; i < 8; i ++){
+			Patas[i]->Step(5);
+		  }
+	  }while(!Patas[0]->limitReach());
+	  
+	  for (int i = 0; i < 8; i ++){
+		  Patas[i]->nextPosition();
+	  }
   }
 }
