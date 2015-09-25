@@ -225,12 +225,6 @@ public:
     void setLimits(float a[3]);
     void Step(float n = 1);
     bool limitReach(void);
-/*
-	void setPositionsList(int a = 0);
-	void setListPosition(char pList[10]);
-	void nextPosition(int n = 1);
-	void limitAllMotors(float n1 = 0, float n2 = 0, float n3 = 0);
-	void stepAllMotors(float n1 = 1, float n2 = 1, float n3 = 1);	*/
 };
 
 
@@ -251,7 +245,6 @@ limb::limb (int num, Side s, bool f){
 		motors[i] = new servoMotor(j, OFF[j], p, s, f);
 	}
 }
-
 
 void limb::setAllAngles(float a[3]){
   for (int i = 0; i < 3; i++)
@@ -316,67 +309,22 @@ void limb::nextPosition(void){
 	setLimits(angles);
 }
 
-/*
-limb::setListPosition(char pList[10]){
-	if (int i = 0; i < 10 || pList[i] != -1; i++){
-		positionsList[i] = pList[i];
-	}
-	
-	if (i >= 10)
-		positionsList[i+1] = -1;
-}
+class spider {
+	const int order[8] = {0, 7, 6, 1, 3, 4, 5, 2};
+	limb* limbs[8];
+public:
+	spider(void);
+	bool limitReach(void);
+	void front(void);
+	void back(void);
+	void walk(int pasos, float qnt = 1);
+	void stand(float tempo);
+};
 
-limb::nextPosition(int n = 1){
-	int m;
-	
-	for (int i = 0; i < 10; i++)
-		if (positionsList[i] == -1)
-			m = i - 1;
-	
-	positionIndex += n
-	
-	if (positionIndex < 0) 		positionIndex = m;
-	else if (positionIndex > m)	positionIndex = 0;
-	
-	setPosition(positionsList[positionIndex]);
-}
-
-limb::limitAllMotors(float n1 = 0, n2 = 0, n3 = 0){	//Não é o jeito mais inteligente de fazer isso
-	M[0].setLimit(n1);
-	M[1].setLimit(n2);
-	M[2].setLimit(n3);
-}
-
-limb::stepAllMotors(float n1 = 1, n2 = 1, n3 = 1){
-	M[0].step(n1);
-	M[1].step(n2);
-	M[2].step(n3);
-}
-
-limb::setPositionsList(int a = 0){
-	positionsList = a;
-	nextPosition(0);
-}
-*/
-
-limb *Patas[8];
-
-void setup() {
-  Serial.begin(9600);
-
-  RightPWM.begin();
-  LeftPWM.begin();
-
-  RightPWM.setPWMFreq(60);  
-  LeftPWM.setPWMFreq(60);
-}
-
-void loop() {
-	float B [3] = {90, 90, 90};
+spider::spider(void) {
 	bool f;
 	Side s;
 	
-	//i == 2 || i == 3 || i == 6 || i == 7
 	for (int i = 0; i < 8; i ++){
 		if (i < 4) 
 			s = Right;
@@ -388,31 +336,83 @@ void loop() {
 		else
 			f = false;
 		
-		Patas[i] = new limb(i, s, f);
-		Patas[i]->setAllAngles(B);
+		limbs[i] = new limb(i, s, f);
+	}
+}
+
+void spider::front(void) {
+	limbs[2]->setPositions("110, 30, 190, 120, 70, 175, 90, 50, 205");	//2
+	limbs[3]->setPositions("120, 70, 175, 90, 50, 205, 110, 30, 190");	//3
+	limbs[4]->setPositions("120, 70, 175, 90, 50, 205, 110, 30, 190");	//4
+	limbs[5]->setPositions("110, 30, 190, 120, 70, 175, 90, 50, 205");	//5
+	
+	limbs[0]->setPositions("110, 30, 190, 90, 50, 205, 120, 70, 175");	//0
+	limbs[1]->setPositions("120, 70, 175, 110, 30, 190, 90, 50, 205");	//1
+	limbs[6]->setPositions("120, 70, 175, 110, 30, 190, 90, 50, 205");	//6
+	limbs[7]->setPositions("110, 30, 190, 90, 50, 205, 120, 70, 175");	//7
+}
+
+void spider::back(void) {
+	limbs[1]->setPositions("110, 30, 190, 120, 70, 175, 90, 50, 205");	//2
+	limbs[0]->setPositions("120, 70, 175, 90, 50, 205, 110, 30, 190");	//3
+	limbs[7]->setPositions("120, 70, 175, 90, 50, 205, 110, 30, 190");	//4
+	limbs[6]->setPositions("110, 30, 190, 120, 70, 175, 90, 50, 205");	//5
+	
+	limbs[3]->setPositions("110, 30, 190, 90, 50, 205, 120, 70, 175");	//0
+	limbs[2]->setPositions("120, 70, 175, 110, 30, 190, 90, 50, 205");	//1
+	limbs[5]->setPositions("120, 70, 175, 110, 30, 190, 90, 50, 205");	//6
+	limbs[4]->setPositions("110, 30, 190, 90, 50, 205, 120, 70, 175");	//7
+}
+
+bool spider::limitReach(void) {
+	bool res = true;
+	
+	for (int i = 0; i < 8; i++) {
+		res = res && limbs[i]->limitReach();
 	}
 	
-	Patas[2]->setPositions("110, 30, 190, 120, 70, 175, 90, 50, 205");	
-	Patas[3]->setPositions("120, 70, 175, 90, 50, 205, 110, 30, 190");
-	Patas[4]->setPositions("120, 70, 175, 90, 50, 205, 110, 30, 190");
-	Patas[5]->setPositions("110, 30, 190, 120, 70, 175, 90, 50, 205");
-	
-	Patas[0]->setPositions("110, 30, 190, 90, 50, 205, 120, 70, 175");
-	Patas[1]->setPositions("120, 70, 175, 110, 30, 190, 90, 50, 205");
-	Patas[6]->setPositions("120, 70, 175, 110, 30, 190, 90, 50, 205");
-	Patas[7]->setPositions("110, 30, 190, 90, 50, 205, 120, 70, 175");
-	
-	delay(500);
-	
-  while(1){
-	  do{
-		  for (int i = 0; i < 8; i ++){
-			Patas[i]->Step(5);
-		  }
-	  }while(!Patas[0]->limitReach());
+	return res;
+}
+
+void spider::walk(int pasos, float qnt){
+	for (int i = 0; i < pasos * 3; i++) {
+		do{
+			for (int c = 0; c < 8; c ++){
+				limbs[c]->Step(qnt);
+			}
+		}while(!limitReach());
 	  
-	  for (int i = 0; i < 8; i ++){
-		  Patas[i]->nextPosition();
-	  }
-  }
+		for (int j = 0; j < 8; j++){
+			limbs[j]->nextPosition();
+		}  
+	}
+}
+
+
+void spider::stand(float tempo) {	
+	float B [3] = {90, 50, 205};
+	
+	for (int i = 0; i < 8; i++)		
+		limbs[i]->setAllAngles(B);
+	
+	delay(tempo);
+}
+
+
+spider Aranha;
+
+void setup() {
+  Serial.begin(9600);
+
+  RightPWM.begin();
+  LeftPWM.begin();
+
+  RightPWM.setPWMFreq(60);  
+  LeftPWM.setPWMFreq(60);
+}
+
+void loop() {		
+	Aranha.stand(500);
+	Aranha.front();
+	Aranha.walk(5, 5);
 }
