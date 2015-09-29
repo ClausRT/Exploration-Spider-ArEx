@@ -319,6 +319,7 @@ public:
 	void back(void);
 	void walk(int pasos, float qnt = 1);
 	void stand(float tempo);
+	void Begin(void);
 };
 
 spider::spider(void) {
@@ -388,7 +389,6 @@ void spider::walk(int pasos, float qnt){
 	}
 }
 
-
 void spider::stand(float tempo) {	
 	float B [3] = {90, 50, 205};
 	
@@ -398,11 +398,8 @@ void spider::stand(float tempo) {
 	delay(tempo);
 }
 
-
-spider Aranha;
-
-void setup() {
-  Serial.begin(9600);
+void spider::Begin(void) {
+  //Serial.begin(9600);
 
   RightPWM.begin();
   LeftPWM.begin();
@@ -411,8 +408,67 @@ void setup() {
   LeftPWM.setPWMFreq(60);
 }
 
-void loop() {		
-	Aranha.stand(500);
-	Aranha.front();
-	Aranha.walk(5, 5);
+String P[3] = {"A",
+			   "B",
+			   "C"};
+
+void teste (void){
+	String s;
+	int B, C;
+      Serial.println("Iniciando o Teste");
+	
+	for (int j; j < 8; j++){
+		s = "";
+		
+		if (j > 1 && j < 6)
+			C = 1;
+		else
+			C = -1;
+		
+		if (j == 0 || j == 2 || j == 5 || j == 7)
+			B = 1;
+		else
+			B = 2;
+		
+		for (int i = 0; i < 3; i++) {
+			B += i * C;
+			
+			if (B > 2)	
+				B = 0;
+			else if (B < 0) 
+				B = 2;
+			
+			s += P[B];			
+		}
+		Serial.print("Pata ");
+		//Serial.print(j);
+		Serial.print(" Pos: ");
+		//Serial.println(s);
+	}
 }
+
+spider Aranha;
+
+void setup() {
+  Serial.begin(9600);
+	Aranha.Begin();
+}
+
+void loop() {		
+	//Aranha.stand(0);
+	//Aranha.front();
+	//Aranha.walk(6, 5);
+	teste();
+	while (1){}
+}
+
+
+/*
+	TO DO LIST
+	
+	- Refazer o método stand para que ele não atrapalhe as outras funções de caminha
+	- Fazer o método de andar de lado
+	- Fazer o método para fazer a curva
+	- Implementar o controle através do módulo bluetooth
+	-
+*/
