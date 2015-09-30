@@ -456,10 +456,12 @@ void setup() {
 
 void loop() {		
 	//Aranha.stand(0);
-	//Aranha.front();
-	//Aranha.walk(6, 5);
-	teste();
-	while (1){}
+	Aranha.front();
+	Aranha.walk(3, 5);
+    Aranha.back();
+    Aranha.walk(3, 5);
+	//teste();
+	//while (1){}
 }
 
 
