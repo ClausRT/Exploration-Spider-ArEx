@@ -38,7 +38,7 @@ enum Side {Left = -1, Right = 1};
 */
 class servoMotor {
 	int id;
-        float angle, offset;
+    float angle, offset;
 	float Min;				
 	float Max;				 
 	servoPos Position;
@@ -46,6 +46,7 @@ class servoMotor {
 	bool Front;
 	float limit;
 	bool limited;
+	int useIsLeft;
 	float checkMinMax (float a);
 	float isLeft (float a);
 public:
@@ -54,7 +55,12 @@ public:
 	void Step (float n = 1);
 	void setLimit (float a = 0);
     bool limitReach(void);	
+	void SideWay(int n);
 };
+
+void servoMotor::SideWay(int n){
+	useIsLeft = n;
+}
 
 servoMotor::servoMotor (int num, float off, servoPos p, Side s, bool f){
 	id = num;
@@ -63,6 +69,7 @@ servoMotor::servoMotor (int num, float off, servoPos p, Side s, bool f){
 	side = s;
 	limited = false;
 	Front = f;
+	useIsLeft = 0;
        
     switch (p){
       case Top:
@@ -84,18 +91,6 @@ servoMotor::servoMotor (int num, float off, servoPos p, Side s, bool f){
         Max = 190;
         break;
     }
-	
-	Serial.print("Motor ");
-	Serial.print(num);
-	Serial.print(" offset: ");
-	Serial.print(off);
-	Serial.print(" Pos: ");
-	Serial.print(p);
-	Serial.print(" Side: ");
-	Serial.print(s);
-	Serial.print(" Front: ");
-	Serial.println(f);
-	Serial.println("");
 }
 
 /*
@@ -118,13 +113,25 @@ float servoMotor::checkMinMax (float a){
 	Internamente a classe armazena o valor teorico/visual dos motores — todos 100 graus — e não o seu valor real.
 */
 float servoMotor::isLeft (float a){
-	bool sLeft = side == Left;
-	bool result = sLeft == Front;
+	bool sLeft, result;
+	
+	if(useIsLeft > 0) {
+		result = false;
+	}
+	else if(useIsLeft < 0){
+		result = true;
+	}
+	else {		
+		sLeft = side == Left;
+		result = sLeft == Front;
+	}
+	
 	
 	if (result && Position == Top)
 		return (-1 * (a - 90)) + 90;
 	else
 		return a;
+	
 }
 
 /*
@@ -225,8 +232,14 @@ public:
     void setLimits(float a[3]);
     void Step(float n = 1);
     bool limitReach(void);
+	void SideWay(int n);
 };
 
+void limb::SideWay(int n){
+	for (int i = 0; i < 3; i++){
+		motors[i]->SideWay(n);
+	}
+}
 
 limb::limb (int num, Side s, bool f){
 	id = num;
@@ -315,12 +328,19 @@ class spider {
 public:
 	spider(void);
 	bool limitReach(void);
-	void front(void);
-	void back(void);
 	void walk(int pasos, float qnt = 1);
 	void stand(float tempo);
 	void Begin(void);
+	void front (String *P, int middle, int end, bool back = false);
+	void turn (String *P, int middle, int end, bool left = false);
+	void SideWay(int n = 0);
 };
+
+void spider::SideWay(int n){
+	for (int i = 0; i < 8; i++){
+		limbs[i]->SideWay(n);
+	}
+}
 
 spider::spider(void) {
 	bool f;
@@ -341,6 +361,7 @@ spider::spider(void) {
 	}
 }
 
+/*Não preciso mais disso, porém não vou apagar por que posso precisar no futuro
 void spider::front(void) {
 	limbs[2]->setPositions("110, 30, 190, 120, 70, 175, 90, 50, 205");	//2
 	limbs[3]->setPositions("120, 70, 175, 90, 50, 205, 110, 30, 190");	//3
@@ -363,7 +384,7 @@ void spider::back(void) {
 	limbs[2]->setPositions("120, 70, 175, 110, 30, 190, 90, 50, 205");	//1
 	limbs[5]->setPositions("120, 70, 175, 110, 30, 190, 90, 50, 205");	//6
 	limbs[4]->setPositions("110, 30, 190, 90, 50, 205, 120, 70, 175");	//7
-}
+}*/
 
 bool spider::limitReach(void) {
 	bool res = true;
@@ -399,25 +420,22 @@ void spider::stand(float tempo) {
 }
 
 void spider::Begin(void) {
-  //Serial.begin(9600);
+	Serial.begin(9600);
 
-  RightPWM.begin();
-  LeftPWM.begin();
+	RightPWM.begin();
+	LeftPWM.begin();
 
-  RightPWM.setPWMFreq(60);  
-  LeftPWM.setPWMFreq(60);
+	RightPWM.setPWMFreq(60);  
+	LeftPWM.setPWMFreq(60);
 }
 
-String P[3] = {"A",
-			   "B",
-			   "C"};
-
-void teste (void){
+void spider::front (String *P, int middle, int end, bool back){
 	String s;
-	int B, C;
-      Serial.println("Iniciando o Teste");
+	int B, C, D;
 	
-	for (int j; j < 8; j++){
+	SideWay(0);
+	
+	for (int j = 0; j < 8; j++){
 		s = "";
 		
 		if (j > 1 && j < 6)
@@ -426,44 +444,139 @@ void teste (void){
 			C = -1;
 		
 		if (j == 0 || j == 2 || j == 5 || j == 7)
-			B = 1;
+			B = middle;
 		else
-			B = 2;
+			B = end;
 		
-		for (int i = 0; i < 3; i++) {
-			B += i * C;
+		for (int i = 0; i <= end; i++) {
+			if (i != 0)
+				B += C;
 			
-			if (B > 2)	
+			if (B > end)	
 				B = 0;
 			else if (B < 0) 
-				B = 2;
+				B = end;
 			
 			s += P[B];			
 		}
 		Serial.print("Pata ");
-		//Serial.print(j);
+		Serial.print(j);
 		Serial.print(" Pos: ");
-		//Serial.println(s);
+		Serial.println(s);
+		Serial.println("");
+		Serial.println("");
+		
+		if (back) {
+			switch (j){	//Pensar numa lógica melhor pois essa solucao me dá asco/nojo
+				case 0:	D = 3;	break;
+				case 1:	D = 2;	break;
+				case 2:	D = 1;	break;
+				case 3:	D = 0;	break;
+				case 4:	D = 7;	break;
+				case 5:	D = 6;	break;
+				case 6:	D = 5;	break;
+				case 7:	D = 4;	break;				
+			}
+		}				
+		else
+			D = j;
+		
+		limbs[D]->setPositions(s);
+	}
+}
+
+void spider::turn (String *P, int middle, int end, bool left){
+	String s;
+	int B, C, D;
+	
+	if (left)
+		SideWay(-1);
+	else
+		SideWay(1);
+	
+	for (int j = 0; j < 8; j++){
+		s = "";
+		
+		if (j > 1 && j < 6)
+			C = 1;
+		else
+			C = -1;
+		
+		if (j == 0 || j == 2 || j == 5 || j == 7)
+			B = middle;
+		else
+			B = end;
+		
+		for (int i = 0; i <= end; i++) {
+			if (i != 0)
+				B += C;
+			
+			if (B > end)	
+				B = 0;
+			else if (B < 0) 
+				B = end;
+			
+			s += P[B];			
+		}
+		Serial.print("Pata ");
+		Serial.print(j);
+		Serial.print(" Pos: ");
+		Serial.println(s);
+		Serial.println("");
+		Serial.println("");
+		
+		if (left) {
+			switch (j){	//Pensar numa lógica melhor pois essa solucao me dá asco/nojo
+				case 4:	D = 7;	break;
+				case 5:	D = 5;	break;
+				case 6:	D = 6;	break;
+				case 7:	D = 4;	break;				
+				default: D = j;
+			}
+		}				
+		else{
+			switch (j){	//Pensar numa lógica melhor pois essa solucao me dá asco/nojo
+				case 0:	D = 3;	break;
+				case 1:	D = 2;	break;
+				case 2:	D = 1;	break;
+				case 3:	D = 0;	break;
+				default: D = j;
+			}
+		}
+		
+		limbs[D]->setPositions(s);
 	}
 }
 
 spider Aranha;
 
 void setup() {
-  Serial.begin(9600);
 	Aranha.Begin();
 }
 
 void loop() {		
-	//Aranha.stand(0);
+	Serial.println("Inicio");
+	Aranha.stand(0);
+	/*while (1) {
 	Aranha.front();
 	Aranha.walk(3, 5);
     Aranha.back();
     Aranha.walk(3, 5);
-	//teste();
-	//while (1){}
+	}*/
+	String P[3] = {"90, 50, 205, ", "110, 30, 190, ", "120, 70, 175, "};
+	
+	while (1) {
+		Aranha.front(P, 1, 2);
+		Aranha.walk(3, 5);
+		Aranha.turn(P, 1, 2);
+		Aranha.walk(10, 5);
+		Aranha.front(P, 1, 2);
+		Aranha.walk(3, 5);
+		Aranha.turn(P, 1, 2, true);
+		Aranha.walk(10, 5);
+		
+	}
 }
-
 
 /*
 	TO DO LIST
