@@ -5,6 +5,7 @@
 
 #include <Wire.h>
 #include <Adafruit_PWMServoDriver.h>
+#include <SoftwareSerial.h>
 #define setAngleDelay 1
 
 Adafruit_PWMServoDriver RightPWM = Adafruit_PWMServoDriver(0x40);	
@@ -17,9 +18,9 @@ Adafruit_PWMServoDriver LeftPWM = Adafruit_PWMServoDriver(0x41);
 float OFF[] = {-3,  0, -55,   //Pata 0
             -18, -8, -53,   //Pata 1
             -27,  8, -53,   //Pata 2
-            -20, -3, -60,   //Pata 3
+            -20, -20, -60,   //Pata 3
             -17,  7, -57,   //Pata 4
-            -19,  2, -55,   //Pata 5
+            -19,  -50, -55,   //Pata 5
             -13,  0, -44,   //Pata 6
             -23, 15, -62    //Pata 7
             };
@@ -548,23 +549,28 @@ void spider::turn (String *P, int middle, int end, bool left){
 	}
 }
 
+SoftwareSerial BTSerial(2, 3); // RX | TX
+
 spider Aranha;
 
 void setup() {
 	Aranha.Begin();
+	//Sabotado. :D
 }
 
 void loop() {		
-	Serial.println("Inicio");
+	//Serial.println("Inicio");
 	Aranha.stand(0);
-	/*while (1) {
-	Aranha.front();
-	Aranha.walk(3, 5);
-    Aranha.back();
-    Aranha.walk(3, 5);
-	}*/
-	String P[3] = {"90, 50, 205, ", "110, 30, 190, ", "120, 70, 175, "};
 	
+	String P[3] = {"90, 50, 205, ", "110, 30, 190, ", "120, 70, 175, "};
+        
+        Aranha.front(P, 1, 2);
+        
+        while(1){
+	  Aranha.walk(3, 5);
+        }	
+
+/*
 	while (1) {
 		Aranha.front(P, 1, 2);
 		Aranha.walk(3, 5);
@@ -573,9 +579,8 @@ void loop() {
 		Aranha.front(P, 1, 2);
 		Aranha.walk(3, 5);
 		Aranha.turn(P, 1, 2, true);
-		Aranha.walk(10, 5);
-		
-	}
+		Aranha.walk(10, 5);		
+	}*/
 }
 
 /*
