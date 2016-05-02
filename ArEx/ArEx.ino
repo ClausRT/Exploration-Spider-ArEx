@@ -16,13 +16,13 @@ Adafruit_PWMServoDriver LeftPWM = Adafruit_PWMServoDriver(0x41);
 	Com esses valores, se requisitado que todos os motores de uma pata fiquem em 90 gruas, a pata ficara completamente esticada.
 */
 float OFF[] = {-3,  0, -55,   //Pata 0
-            -18, -8, -53,   //Pata 1
-            -27,  8, -53,   //Pata 2
-            -20, -20, -60,   //Pata 3
-            -17,  7, -57,   //Pata 4
-            -19,  -50, -55,   //Pata 5
-            -13,  0, -44,   //Pata 6
-            -23, 15, -62    //Pata 7
+            -18, -7, -50,   //Pata 1
+            -27,  8, -50,   //Pata 2
+            -20, -20, -63,   //Pata 3
+            -17,  8, -57,   //Pata 4
+            -60,  -42, -55,   //Pata 5
+            11,  0, -44,   //Pata 6
+            -23, 20, -62    //Pata 7
             };
 
 enum servoPos {Top = 0, Mid, Bot};
